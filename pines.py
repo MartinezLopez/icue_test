@@ -26,6 +26,7 @@
 
 import platform
 import re
+from singleton import Singleton
 
 @Singleton
 class PinesFPGA:
@@ -33,15 +34,22 @@ class PinesFPGA:
   def __init__(self):
 	  
 	pi = self.pi_version()
-    if pi is not None:
+	if pi is not None:
 		import RPi.GPIO as gpio #RbP
+		self.gpio = gpio
 		self.pines = {'l1_ls': 12,'l1_ms': 11, 'r1_ls': 22, 'r1_ms': 21,'l2_ls': 16,'l2_ms': 15, 'r2_ls': 24, 'r2_ms': 23, 'sync_ls': 19, 'sync_ms': 18, 'rst': 13} #RbP
 		gpio.setmode(gpio.BOARD) #RbP
+		print 'Raspberry'
 	else:
-		plat = platform.platform()
+		'''plat = platform.platform()
 		if plat.lower().find('armv7l-with-debian') > -1:
 			import Adafruit_BBIO.GPIO as gpio #BBB
 			self.pines = {'l1_ls': "P8_10",'l1_ms': "P8_8", 'r1_ls': "P8_14", 'r1_ms': "P8_12",'l2_ls': "P8_9",'l2_ms': "P8_7", 'r2_ls': "P8_13", 'r2_ms': "P8_11", 'sync_ls': "P8_18", 'sync_ms': "P8_16", 'rst': "P8_17"} #BBB
+			print 'BBB'
+		'''
+		import Adafruit_BBIO.GPIO as gpio #BBB
+		self.gpio = gpio
+		self.pines = {'l1_ls': "P8_10",'l1_ms': "P8_8", 'r1_ls': "P8_14", 'r1_ms': "P8_12",'l2_ls': "P8_9",'l2_ms': "P8_7", 'r2_ls': "P8_13", 'r2_ms': "P8_11", 'sync_ls': "P8_18", 'sync_ms': "P8_16", 'rst': "P8_17"} #BBB
 	
 	'''for i in self.pines.keys():
 		gpio.setup(self.pines[i], gpio.OUT)
@@ -51,7 +59,7 @@ class PinesFPGA:
 	[gpio.output(self.pines[i], gpio.LOW) for i in self.pines.keys()]
 	self.reset(True)
 		
-  def pi_version():
+  def pi_version(self):
     """Detect the version of the Raspberry Pi.  Returns either 1, 2 or
     None depending on if it's a Raspberry Pi 1 (model A, B, A+, B+),
     Raspberry Pi 2 (model B+), or not a Raspberry Pi.
@@ -79,6 +87,7 @@ class PinesFPGA:
         return None
   
   def setLength1(self, length):
+    gpio = self.gpio
     if length == 0:
       gpio.output(self.pines["l1_ms"], gpio.LOW)
       gpio.output(self.pines["l1_ls"], gpio.LOW)
@@ -93,6 +102,7 @@ class PinesFPGA:
       gpio.output(self.pines["l1_ls"], gpio.HIGH)
   
   def setRate1(self, rate):
+    gpio = self.gpio
     if rate == 0:
       gpio.output(self.pines["r1_ms"], gpio.LOW)
       gpio.output(self.pines["r1_ls"], gpio.LOW)
@@ -107,6 +117,7 @@ class PinesFPGA:
       gpio.output(self.pines["r1_ls"], gpio.HIGH)
   
   def setLength2(self, length):
+    gpio = self.gpio
     if length == 0:
       gpio.output(self.pines["l2_ms"], gpio.LOW)
       gpio.output(self.pines["l2_ls"], gpio.LOW)
@@ -121,6 +132,7 @@ class PinesFPGA:
       gpio.output(self.pines["l2_ls"], gpio.HIGH)
   
   def setRate2(self, rate):
+    gpio = self.gpio
     if rate == 0:
       gpio.output(self.pines["r2_ms"], gpio.LOW)
       gpio.output(self.pines["r2_ls"], gpio.LOW)
@@ -135,6 +147,7 @@ class PinesFPGA:
       gpio.output(self.pines["r2_ls"], gpio.HIGH)
   
   def setClock(self, clock):
+    gpio = self.gpio
     if clock == 1:
       gpio.output(self.pines["sync_ms"], gpio.LOW)
       gpio.output(self.pines["sync_ls"], gpio.LOW)
@@ -149,6 +162,7 @@ class PinesFPGA:
       gpio.output(self.pines["sync_ls"], gpio.HIGH)
   
   def reset(self, state):
+    gpio = self.gpio
     if state:
       gpio.output(self.pines["rst"], gpio.LOW)
       for i in range(100): # Perdemos tiempo
@@ -165,4 +179,4 @@ class PinesFPGA:
 	  self.setClock(sync)
   
   def quitGPIO(self):
-    gpio.cleanup()
+    self.gpio.cleanup()

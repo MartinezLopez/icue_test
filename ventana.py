@@ -25,6 +25,7 @@ import sys
 from PyQt4 import QtGui, QtCore
 from osciloscopio import Osciloscopio
 from pines import PinesFPGA
+import time
 #from modbus import *
 
 import matplotlib
@@ -94,10 +95,19 @@ class VentanaPrincipal(QtGui.QWidget):
 		self.v = VentanaOjo(ch)
 		
 class VentanaResultados(QtGui.QWidget):
+	dic_medida = {0:'Frecuencia: 10 MHz\nLongitud de trama: 4', 1:'Frecuencia: 10 MHz\nLongitud de trama: 8', 2:'Frecuencia: 10 MHz\nLongitud de trama: 12', 3:'Frecuencia: 10 MHz\nLongitud de trama: 16', 4:'Frecuencia: 30 MHz\nLongitud de trama: 4', 5:'Frecuencia: 30 MHz\nLongitud de trama: 8', 6:'Frecuencia: 30 MHz\nLongitud de trama: 12', 7:'Frecuencia: 30 MHz\nLongitud de trama: 16', 8:'Frecuencia: 70 MHz\nLongitud de trama: 4', 9:'Frecuencia: 70 MHz\nLongitud de trama: 8', 10:'Frecuencia: 70 MHz\nLongitud de trama: 12', 11:'Frecuencia: 70 MHz\nLongitud de trama: 16', 12:'Frecuencia: 125 MHz\nLongitud de trama: 4', 13:'Frecuencia: 125 MHz\nLongitud de trama: 8', 14:'Frecuencia: 125 MHz\nLongitud de trama: 12', 15:'Frecuencia: 125 MHz\nLongitud de trama: 16', 16:''}
 	def __init__(self):
 		super(VentanaResultados, self).__init__()
 		self.config = 0
 		self.creaInterfaz()
+		osc = Osciloscopio.Instance()
+		osc.set_display('YT')
+		osc.set_trigger('ext5', 1)
+		osc.disp_channel(True, '1')
+		osc.set_vertical('1', '500mv', 'AC', '1')
+		osc.disp_channel(True, '2')
+		osc.set_vertical('2', '500mv', 'AC', '1')
+		time.sleep(0.1)
 	
 	def creaInterfaz(self):
 		vbox = QtGui.QVBoxLayout()
@@ -144,6 +154,7 @@ class VentanaResultados(QtGui.QWidget):
 			self.close()
 
 class VentanaSof(VentanaResultados):
+	dic_tb = {0:['250ns', '800E-9'], 1:['100ns', '260E-9'], 2:['25ns', '105E-9'], 3:['25ns','64E-9'], 4:['25ns','64E-9']}
 	def __init__(self, ch):
 		super(VentanaSof, self).__init__()
 		self.setWindowTitle(u'Diagnóstico ICUE: SOF CH %d' % (ch,))
@@ -152,14 +163,16 @@ class VentanaSof(VentanaResultados):
 		self.medida()
 	
 	def configuracion(self):
-		#Cuando se rehaga pines hay que tener todo esto en cuenta
 		freq = self.config // 4 #Parte entera
 		leng = self.config % 4  #Resto
 		
 		sync = {1:3, 2:4}
 		
+		osc = Osciloscopio.Instance()
+		osc.set_tb(self.dic_tb[freq][0], self.dic_tb[freq][1])
+		
 		pines = PinesFPGA.Instance()
-		pines.config(freq, leng, freq, leng, sync[ch])
+		pines.config(freq, leng, freq, leng, sync[self.ch])
 	
 	def medida(self):
 		osc = Osciloscopio.Instance()
@@ -181,6 +194,8 @@ class VentanaSof(VentanaResultados):
 		self.ax2.xaxis.set_major_formatter(self.formatter_tiempo)
 		self.ax2.plot(tiempos2, ch2)
 		
+		self.texto.setText(self.dic_medida[self.config])
+		
 		self.figure.canvas.draw()
 	
 	def siguiente(self):
@@ -191,10 +206,12 @@ class VentanaSof(VentanaResultados):
 		 self.medida()
 		 QtGui.QApplication.restoreOverrideCursor()
 		 if self.config == 16:
-			 w = VentanaInfo('Se ha completado el test de manera satisfactoria')
-			 self.close()
+                         w = VentanaInfo('Se ha completado el test de manera satisfactoria')
+                         self.close()
+
 
 class VentanaOjo(VentanaResultados):
+	dic_tb = {0:['25ns', '50E-9'], 1:['5ns', '22E-9'], 2:['2.5ns', '12E-9'], 3:['2.5ns','2E-9'], 4:['2.5ns','2E-9']}
 	def __init__(self, ch):
 		super(VentanaOjo, self).__init__()
 		self.setWindowTitle(u'Diagnóstico ICUE: SYNC CH %d' % (ch,))
@@ -213,6 +230,8 @@ class VentanaOjo(VentanaResultados):
 		leng = self.config % 4  #Resto
 		
 		#sync = {1:3, 2:4} Aqui no hace falta porque ya son 1 y 2, pero podria cambiar en algun momento
+		osc = Osciloscopio.Instance()
+                osc.set_tb(self.dic_tb[freq][0], self.dic_tb[freq][1])
 		
 		pines = PinesFPGA.Instance()
 		pines.config(freq, leng, freq, leng, self.ch)
@@ -226,6 +245,9 @@ class VentanaOjo(VentanaResultados):
 		self.ax2.cla()
 		self.ax2.plot(tiempos2, ch2)
 		self.ax2.xaxis.set_major_formatter(self.formatter_tiempo)
+		
+		self.texto.setText(self.dic_medida[self.config])
+		
 		self.timer_osc.start(700)
 	
 	def adquiere(self):

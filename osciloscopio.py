@@ -339,6 +339,10 @@ class Osciloscopio:
   
   def set_persistence_off(self): #Se deja asi porque de momento no interesa la persistencia, pero se podria poner en cualquier momento
     self.ins.write("DIS:PERS OFF")
+  
+  def set_tb(self, scale, pos):
+    self.set_horizontal(scale)
+    self.ins.write("HOR:POS %s" % (pos,))
     
 
 
